@@ -3,10 +3,14 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import astropy.constants as const
+import astropy.units as unit
 
 st.title("Interactive Web Application to Plot the Peformance of Drones and Cubesats Using AWG Photonic Chips")
-number = st.number_input("Please enter the altitude of the Cubesat Orbit in kilometers")
-st.write("Entered cubesat orbit altitude in km: ", number)
+a_surface = st.number_input("Please enter the altitude of the Cubesat Orbit in kilometers") * unit.km
+st.write("Entered cubesat orbit altitude: ", a_surface)
+cubesat_aperture = st.number_input("Please enter the aperture of the primary optic of the cubesat in cm") * unit.cm
+st.write("Entered cubesat orbit altitude: ", cubesat_aperture)
 scale_factors = [2**n for n in range(10)]
 for n in range(16):
     scale_factors.append(1.5**(n+1))
@@ -107,3 +111,54 @@ def get_smallest_neighbor(channel_wavelen, wavelen_arr):
             return (i, wavelen_arr[i])
 solar_smallest_neighbors = [get_smallest_neighbor(c, solar_microns) for c in channel_edges]
 smallest_neighbors = [get_smallest_neighbor(c, scale_1_wavelen_arr) for c in channel_edges]
+""" 
+Now we will make dictionaries. The first dictionary is callend wavelen_arrs_dict 
+and each key is a scale_factor and each value is be the corresponding wavelengths used in the 
+output of the spectralcalc simulation. The second dictionary is callend transmi_arrs_dict and each 
+key is a scale_factor and each value is the corresponding transmission as a dimensionless number 
+between 0 and 1 used in the output of the spectralcalc simulation. 
+"""
+wavelen_arrs_dict, transmi_arrs_dict, equal_lengths = {}, {}, {}
+for i in range(len(scale_factors)):
+    sf = scale_factors[i]
+    wavelen_arrs_dict[sf], transmi_arrs_dict[sf] = read_spectralcalc_output(file_paths[i])
+    equal_lengths[sf] = len(wavelen_arrs_dict[sf]) == len(transmi_arrs_dict[sf])
+def get_channel_avg_transmi(transmi_arr):
+    """Returns the average transmittance in a spectral channel"""
+    return [np.average(transmi_arr[smallest_neighbors[i][0]:smallest_neighbors[i+1][0]]) 
+    for i in range(20)]
+awg_channels_avg_transmi_arrs_dict = {}
+for sf in scale_factors:
+    awg_channels_avg_transmi_arrs_dict[sf] = get_channel_avg_transmi(
+        transmi_arrs_dict[sf])
+def get_avg_awg_radiance(awg_channels_avg_transmi, solar_radiances):
+    return [ (0.05/a_surface) *
+        awg_channels_avg_transmi[i] * solar_radiances[solar_smallest_neighbors[i][0]] 
+        for i in range(len(awg_channels_avg_transmi)) 
+    ]
+awg_channels_avg_irr_arrs_dict = {}
+for sf in scale_factors:
+    awg_channels_avg_irr_arrs_dict[sf] = get_avg_awg_radiance(
+        awg_channels_avg_transmi_arrs_dict[sf], solar_radiances)
+M, G = const.M_earth, const.G
+a_center_earth = (a_surface + const.R_earth).to(unit.m)
+P = (np.sqrt(4 * np.pi**2 * a_center_earth**3 / (G*M))).to(unit.second)
+v = (np.sqrt(G*M/a_center_earth)).to(unit.m/unit.second)
+orbit_fraction = v * 0.1 * unit.second / (2 * np.pi * a_center_earth) 
+distance_swept_on_Earth = orbit_fraction * const.R_earth * 2 * np.pi #meters
+fov_radius_meters = (1.22 * (1.5*10**-6 / 5 *10**-2)) * a_surface.to(unit.m)  
+radians_viewed = 1.22 * (1.5*10**-6 / 5 *10**-2) #radians!
+solid_angle_viewed = radians_viewed**2 #steradians
+photon_energy = 10**-34 * 6.626 * 299792458 / (1560 * 10**-9)
+area = cubesat_aperture.to(unit.m)**2 * np.pi #square meters
+solid_angle_of_telescope_viewed_by_Earth = float((area / a_surface**2).to(""))
+def w_per_m2_per_sr_to_counts_per_second(w_per_m2_per_sr_arr):
+    return [x * area * solid_angle_of_telescope_viewed_by_Earth / photon_energy
+        for x in w_per_m2_per_sr_arr]
+counts_per_second_arrs_dict = {}
+for sf in scale_factors:
+    counts_per_second_arrs_dict[sf] = w_per_m2_per_sr_to_counts_per_second(
+        awg_channels_avg_irr_arrs_dict[sf])
+
+
+
