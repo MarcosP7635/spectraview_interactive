@@ -1,0 +1,6 @@
+pandas
+numpy
+ipywidgets==8.0
+voila
+plotly
+astropy
