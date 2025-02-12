@@ -6,11 +6,12 @@ import plotly.graph_objects as go
 import astropy.constants as const
 import astropy.units as unit
 
-st.title("Interactive Web Application to Plot the Peformance of Drones and Cubesats Using AWG Photonic Chips")
+st.title(
+"Interactive Web Application to Plot the Peformance of Drones and Cubesats Using AWG Photonic Chips")
 a_surface = st.number_input("Please enter the altitude of the Cubesat Orbit in kilometers") * unit.km
-st.write("Entered cubesat orbit altitude: ", a_surface)
+st.write("Entered cubesat orbit altitude: ", str(a_surface))
 cubesat_aperture = st.number_input("Please enter the aperture of the primary optic of the cubesat in cm") * unit.cm
-st.write("Entered cubesat orbit altitude: ", cubesat_aperture)
+st.write("Entered cubesat aperture: ", str(cubesat_aperture))
 scale_factors = [2**n for n in range(10)]
 for n in range(16):
     scale_factors.append(1.5**(n+1))
@@ -64,11 +65,10 @@ def txt_to_float_arr(path, first_index=1):
         output_arr = [float(x) for x in file.read().split('\n')[first_index:]]
         all_floats = all([type(x) == float for x in output_arr])
         return output_arr, all_floats
-p = 'spectralcalc_transmission/extraterrestrial_solar_spectrum_wavelengths.txt'
+p = 'spectralcalc_transmission/extraterrestrial_solar_spectrum_wavelengths.txt' #microns
 solar_microns, all_floats = txt_to_float_arr(p)
-p = 'spectralcalc_transmission/extraterrestrial_solar_irradiance.txt'
+p = 'spectralcalc_transmission/extraterrestrial_solar_irradiance.txt' #W/m2/micron
 solar_radiances, all_floats = txt_to_float_arr(p)
-
 def read_spectralcalc_output(path, start_line=25, end_line=1):
     """
     Reads the spectral calculation output from a file, extracting wavelength
@@ -110,15 +110,15 @@ def get_smallest_neighbor(channel_wavelen, wavelen_arr):
         if wavelen_arr[i] > channel_wavelen/1000:
             return (i, wavelen_arr[i])
 solar_smallest_neighbors = [get_smallest_neighbor(c, solar_microns) for c in channel_edges]
+p = file_paths[0]
+scale_1_wavelen_arr, scale_1_transmi_arr = read_spectralcalc_output(p)
 smallest_neighbors = [get_smallest_neighbor(c, scale_1_wavelen_arr) for c in channel_edges]
-""" 
-Now we will make dictionaries. The first dictionary is callend wavelen_arrs_dict 
-and each key is a scale_factor and each value is be the corresponding wavelengths used in the 
-output of the spectralcalc simulation. The second dictionary is callend transmi_arrs_dict and each 
-key is a scale_factor and each value is the corresponding transmission as a dimensionless number 
-between 0 and 1 used in the output of the spectralcalc simulation. 
-"""
 wavelen_arrs_dict, transmi_arrs_dict, equal_lengths = {}, {}, {}
+#Now we will make dictionaries. The first dictionary is callend wavelen_arrs_dict 
+#and each key is a scale_factor and each value is be the corresponding wavelengths used in the 
+#output of the spectralcalc simulation. The second dictionary is callend transmi_arrs_dict and each 
+#key is a scale_factor and each value is the corresponding transmission as a dimensionless number 
+#between 0 and 1 used in the output of the spectralcalc simulation. 
 for i in range(len(scale_factors)):
     sf = scale_factors[i]
     wavelen_arrs_dict[sf], transmi_arrs_dict[sf] = read_spectralcalc_output(file_paths[i])
@@ -132,7 +132,9 @@ for sf in scale_factors:
     awg_channels_avg_transmi_arrs_dict[sf] = get_channel_avg_transmi(
         transmi_arrs_dict[sf])
 def get_avg_awg_radiance(awg_channels_avg_transmi, solar_radiances):
-    return [ (0.05/a_surface) *
+    #that coefficient is because the spectral width of each spectral channel is 0.05 nm
+    #and the solar radiances are given in W/m2/micron
+    return [ (0.05/1000) *
         awg_channels_avg_transmi[i] * solar_radiances[solar_smallest_neighbors[i][0]] 
         for i in range(len(awg_channels_avg_transmi)) 
     ]
@@ -149,16 +151,23 @@ distance_swept_on_Earth = orbit_fraction * const.R_earth * 2 * np.pi #meters
 fov_radius_meters = (1.22 * (1.5*10**-6 / 5 *10**-2)) * a_surface.to(unit.m)  
 radians_viewed = 1.22 * (1.5*10**-6 / 5 *10**-2) #radians!
 solid_angle_viewed = radians_viewed**2 #steradians
-photon_energy = 10**-34 * 6.626 * 299792458 / (1560 * 10**-9)
+photon_energy = 10**-34 * 6.626 * 299792458 / (1560 * 10**-9) #joules
 area = cubesat_aperture.to(unit.m)**2 * np.pi #square meters
+area_sq_meters = (area / unit.m**2).to("")
 solid_angle_of_telescope_viewed_by_Earth = float((area / a_surface**2).to(""))
 def w_per_m2_per_sr_to_counts_per_second(w_per_m2_per_sr_arr):
-    return [x * area * solid_angle_of_telescope_viewed_by_Earth / photon_energy
+    return [x * area_sq_meters * solid_angle_of_telescope_viewed_by_Earth / photon_energy
         for x in w_per_m2_per_sr_arr]
 counts_per_second_arrs_dict = {}
 for sf in scale_factors:
     counts_per_second_arrs_dict[sf] = w_per_m2_per_sr_to_counts_per_second(
         awg_channels_avg_irr_arrs_dict[sf])
+all_scales_counts_per_second = [x for x in counts_per_second_arrs_dict.values()]
+flow_rates = [(x-1)*80 * 100000/2 for x in scale_factors]
+#based on Guassian methane plumes and the ideal gas law.
+worst_snrs = [np.sqrt(np.min(x) * 0.1) for x in all_scales_counts_per_second]
+worst_uncertainties = [100/x for x in worst_snrs]
+
 
 
 
