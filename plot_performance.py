@@ -3,15 +3,23 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-import astropy.constants as const
-import astropy.units as unit
 
 st.title(
 "Interactive Web Application to Plot the Peformance of Drones and Cubesats Using AWG Photonic Chips")
-a_surface = st.number_input("Please enter the altitude of the Cubesat Orbit in kilometers") * unit.km
-st.write("Entered cubesat orbit altitude: ", str(a_surface))
-cubesat_aperture = st.number_input("Please enter the aperture of the primary optic of the cubesat in cm") * unit.cm
-st.write("Entered cubesat aperture: ", str(cubesat_aperture))
+a_surface_km = st.number_input(
+"Please enter the altitude of the Cubesat Orbit in kilometers",
+value=600, placeholder="Type a number...") 
+st.write("Entered cubesat orbit altitude: ", str(a_surface_km), " km")
+cubesat_aperture_cm = st.number_input(
+"Please enter the aperture of the primary optic of the cubesat in cm",
+value=10, placeholder="Type a number...") 
+st.write("Entered cubesat aperture: ", str(cubesat_aperture_cm), " cm")
+time_exposure = st.number_input(
+"Please enter the exposure time of the Cubesat's Detector in seconds",
+value=0.1, placeholder="Type a number...") 
+st.write("Entered cubesat exposure time: ", str(time_exposure))
+#now convert to kilograms, meters, and seconds SI.
+cubesat_aperture, a_surface = cubesat_aperture_cm * 10**-2, a_surface_km * 10**3
 scale_factors = [2**n for n in range(10)]
 for n in range(16):
     scale_factors.append(1.5**(n+1))
@@ -91,7 +99,7 @@ def read_spectralcalc_output(path, start_line=25, end_line=1):
         - transmi_arr: List of transmittance values (dimensionless fraction between 0 and 1) 
             corresponding to the wavelengths.
     """
-    with open(p, 'r') as file:
+    with open(path, 'r') as file:
         file_lines_arr = file.read().split('\n')
     wavelen_arr, transmi_arr = [], []
     for i in range(len(file_lines_arr)-(start_line+end_line)):
@@ -123,13 +131,12 @@ for i in range(len(scale_factors)):
     sf = scale_factors[i]
     wavelen_arrs_dict[sf], transmi_arrs_dict[sf] = read_spectralcalc_output(file_paths[i])
     equal_lengths[sf] = len(wavelen_arrs_dict[sf]) == len(transmi_arrs_dict[sf])
-def get_channel_avg_transmi(transmi_arr):
-    """Returns the average transmittance in a spectral channel"""
-    return [np.average(transmi_arr[smallest_neighbors[i][0]:smallest_neighbors[i+1][0]]) 
-    for i in range(20)]
+def get_channel_avg_transmi_squared(transmi_arr):
+    return [np.average(transmi_arr[smallest_neighbors[i][0]:
+    smallest_neighbors[i+1][0]]) **2 for i in range(20)]
 awg_channels_avg_transmi_arrs_dict = {}
 for sf in scale_factors:
-    awg_channels_avg_transmi_arrs_dict[sf] = get_channel_avg_transmi(
+    awg_channels_avg_transmi_arrs_dict[sf] = get_channel_avg_transmi_squared(
         transmi_arrs_dict[sf])
 def get_avg_awg_radiance(awg_channels_avg_transmi, solar_radiances):
     #that coefficient is because the spectral width of each spectral channel is 0.05 nm
@@ -142,31 +149,52 @@ awg_channels_avg_irr_arrs_dict = {}
 for sf in scale_factors:
     awg_channels_avg_irr_arrs_dict[sf] = get_avg_awg_radiance(
         awg_channels_avg_transmi_arrs_dict[sf], solar_radiances)
-M, G = const.M_earth, const.G
-a_center_earth = (a_surface + const.R_earth).to(unit.m)
-P = (np.sqrt(4 * np.pi**2 * a_center_earth**3 / (G*M))).to(unit.second)
-v = (np.sqrt(G*M/a_center_earth)).to(unit.m/unit.second)
-orbit_fraction = v * 0.1 * unit.second / (2 * np.pi * a_center_earth) 
-distance_swept_on_Earth = orbit_fraction * const.R_earth * 2 * np.pi #meters
-fov_radius_meters = (1.22 * (1.5*10**-6 / 5 *10**-2)) * a_surface.to(unit.m)  
-radians_viewed = 1.22 * (1.5*10**-6 / 5 *10**-2) #radians!
+M = 5.9721679 * 10**24 #kg
+G = 6.6743 * 10**-11 #m^3 kg^-1 s^-2
+R_earth = 6378100 #m
+a_center_earth = a_surface + R_earth
+P = np.sqrt(4 * np.pi**2 * a_center_earth**3 / (G*M))
+v = np.sqrt(G*M/a_center_earth) #meters per second
+orbit_fraction = time_exposure / P #meters
+distance_swept_on_Earth = orbit_fraction * R_earth * 2 * np.pi
+wavelength_approx = 1560 * 10**-9 # meters
+radians_viewed = (1.22 * (wavelength_approx / cubesat_aperture))
+fov_radius_meters = radians_viewed * a_surface
 solid_angle_viewed = radians_viewed**2 #steradians
 photon_energy = 10**-34 * 6.626 * 299792458 / (1560 * 10**-9) #joules
-area = cubesat_aperture.to(unit.m)**2 * np.pi #square meters
-area_sq_meters = (area / unit.m**2).to("")
-solid_angle_of_telescope_viewed_by_Earth = float((area / a_surface**2).to(""))
-def w_per_m2_per_sr_to_counts_per_second(w_per_m2_per_sr_arr):
-    return [x * area_sq_meters * solid_angle_of_telescope_viewed_by_Earth / photon_energy
-        for x in w_per_m2_per_sr_arr]
+area = ((cubesat_aperture/2)**2) * np.pi #square meters
+solid_angle_of_telescope_viewed_by_Earth = (area) / a_surface**2 #steradians
+side_length_pixel_perp_to_orbit_dir = fov_radius_meters 
+#resolveable distance in meters
+
+st.print("Thus the pixel size is " + str(np.round(
+    side_length_pixel_perp_to_orbit_dir)) + "meters by " +
+    str(np.round(distance_swept_on_Earth, 1)) + " meters.")
+
+def w_per_m2_to_counts_per_second(w_per_m2_arr):
+    return [x * (fov_radius_meters**2) * 
+    solid_angle_of_telescope_viewed_by_Earth / photon_energy
+    for x in w_per_m2_arr]
 counts_per_second_arrs_dict = {}
 for sf in scale_factors:
-    counts_per_second_arrs_dict[sf] = w_per_m2_per_sr_to_counts_per_second(
+    counts_per_second_arrs_dict[sf] = w_per_m2_to_counts_per_second(
         awg_channels_avg_irr_arrs_dict[sf])
 all_scales_counts_per_second = [x for x in counts_per_second_arrs_dict.values()]
-flow_rates = [(x-1)*80 * 100000/2 for x in scale_factors]
-#based on Guassian methane plumes and the ideal gas law.
-worst_snrs = [np.sqrt(np.min(x) * 0.1) for x in all_scales_counts_per_second]
-worst_uncertainties = [100/x for x in worst_snrs]
+
+index = 2
+st.print("So the total difference in the number of counts per second between background methane and " 
+     + str((np.round((scale_factors[index]-1)*100, 3))) + "% more methane is" )
+count_difference = exposure_time * (
+    np.sum(counts_per_second_arrs_dict[scale_factors[0]]) - 
+    np.sum(counts_per_second_arrs_dict[scale_factors[index]]))
+st.print("Difference in counts: ", count_difference)
+st.print("Photon Noise in counts: ", 
+      np.sqrt(exposure_time * np.min(counts_per_second_arrs_dict[scale_factors[index]])))
+if count_difference > np.sqrt(exposure_time * np.min(counts_per_second_arrs_dict[scale_factors[index]])):
+    st.print("We are sensitive to that difference in counts!")
+else:
+    st.print("The difference in counts is less than the photon noise.")
+
 
 
 
