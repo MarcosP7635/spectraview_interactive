@@ -17,7 +17,7 @@ st.write("Entered cubesat aperture: ", str(cubesat_aperture_cm), " cm")
 time_exposure = st.number_input(
 "Please enter the exposure time of the Cubesat's Detector in seconds",
 value=0.1, placeholder="Type a number...") 
-st.write("Entered cubesat exposure time: ", str(time_exposure))
+st.write("Entered cubesat exposure time: ", str(time_exposure), " seconds")
 #now convert to kilograms, meters, and seconds SI.
 cubesat_aperture, a_surface = cubesat_aperture_cm * 10**-2, a_surface_km * 10**3
 scale_factors = [2**n for n in range(10)]
@@ -136,8 +136,8 @@ def get_channel_avg_transmi_squared(transmi_arr):
     smallest_neighbors[i+1][0]]) **2 for i in range(20)]
 awg_channels_avg_transmi_arrs_dict = {}
 for sf in scale_factors:
-    awg_channels_avg_transmi_arrs_dict[sf] = get_channel_avg_transmi_squared(
-        transmi_arrs_dict[sf])
+    awg_channels_avg_transmi_arrs_dict[sf] = (
+    get_channel_avg_transmi_squared(transmi_arrs_dict[sf]))
 def get_avg_awg_radiance(awg_channels_avg_transmi, solar_radiances):
     #that coefficient is because the spectral width of each spectral channel is 0.05 nm
     #and the solar radiances are given in W/m2/micron
@@ -159,16 +159,16 @@ orbit_fraction = time_exposure / P #meters
 distance_swept_on_Earth = orbit_fraction * R_earth * 2 * np.pi
 wavelength_approx = 1560 * 10**-9 # meters
 radians_viewed = (1.22 * (wavelength_approx / cubesat_aperture))
-fov_radius_meters = radians_viewed * a_surface
+fov_radius_meters = radians_viewed * a_surface / 2
 solid_angle_viewed = radians_viewed**2 #steradians
 photon_energy = 10**-34 * 6.626 * 299792458 / (1560 * 10**-9) #joules
 area = ((cubesat_aperture/2)**2) * np.pi #square meters
-solid_angle_of_telescope_viewed_by_Earth = (area) / a_surface**2 #steradians
-side_length_pixel_perp_to_orbit_dir = fov_radius_meters 
-#resolveable distance in meters
+solid_angle_of_telescope_viewed_by_Earth = area / (a_surface**2) #steradians
+side_length_pixel_perp_to_orbit_dir = 2 * fov_radius_meters 
+#resolveable distance in meters 
 
-st.print("Thus the pixel size is " + str(np.round(
-    side_length_pixel_perp_to_orbit_dir)) + "meters by " +
+st.write("Thus the pixel size is " + str(np.round(
+    side_length_pixel_perp_to_orbit_dir)) + " meters by " +
     str(np.round(distance_swept_on_Earth, 1)) + " meters.")
 
 def w_per_m2_to_counts_per_second(w_per_m2_arr):
@@ -182,18 +182,18 @@ for sf in scale_factors:
 all_scales_counts_per_second = [x for x in counts_per_second_arrs_dict.values()]
 
 index = 2
-st.print("So the total difference in the number of counts per second between background methane and " 
+st.write("So the total difference in the number of counts per second between background methane and " 
      + str((np.round((scale_factors[index]-1)*100, 3))) + "% more methane is" )
-count_difference = exposure_time * (
+count_difference = time_exposure * (
     np.sum(counts_per_second_arrs_dict[scale_factors[0]]) - 
     np.sum(counts_per_second_arrs_dict[scale_factors[index]]))
-st.print("Difference in counts: ", count_difference)
-st.print("Photon Noise in counts: ", 
-      np.sqrt(exposure_time * np.min(counts_per_second_arrs_dict[scale_factors[index]])))
-if count_difference > np.sqrt(exposure_time * np.min(counts_per_second_arrs_dict[scale_factors[index]])):
-    st.print("We are sensitive to that difference in counts!")
+st.write("Difference in counts: ", count_difference)
+st.write("Photon Noise in counts: ", 
+      np.sqrt(time_exposure * np.min(counts_per_second_arrs_dict[scale_factors[index]])))
+if count_difference > np.sqrt(time_exposure * np.min(counts_per_second_arrs_dict[scale_factors[index]])):
+    st.write("We are sensitive to that difference in counts!")
 else:
-    st.print("The difference in counts is less than the photon noise.")
+    st.write("The difference in counts is less than the photon noise.")
 
 
 
