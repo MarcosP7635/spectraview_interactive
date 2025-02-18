@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import sympy
 
 st.title(
 "Interactive Web Application to Plot the Peformance of Drones and Cubesats Using AWG Photonic Chips")
@@ -20,6 +21,14 @@ value=0.1, placeholder="Type a number...")
 st.write("Entered cubesat exposure time: ", str(time_exposure), " seconds")
 #now convert to kilograms, meters, and seconds SI.
 cubesat_aperture, a_surface = cubesat_aperture_cm * 10**-2, a_surface_km * 10**3
+D = sympy.symbols("D")
+lam = sympy.symbols("lambda")
+lam_def, lam_val = sympy.symbols("lambda"), 1560
+formula = 1.22 * lam / D
+def get_vars(expression):
+    return [x for x in expression.free_symbols] 
+if st.button("Show work?"):
+    st.write("Where $$\\Large" + sympy.latex(formula) + "$$")
 scale_factors = [2**n for n in range(10)]
 for n in range(16):
     scale_factors.append(1.5**(n+1))
