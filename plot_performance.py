@@ -30,20 +30,37 @@ D_def = "the diameter of the telescope's primary optic in meters"
 vars_dict = {} 
 vars_dict[lam], vars_dict[D] = {"Definition": lam_def, "Value": lam_val}, {"Definition": D_def, "Value": D_val}
 rayleigh_criterion = 1.22 * lam / D
+vars_dict[lam]["Symbol"], vars_dict[D]["Symbol"] = lam_symbol, D_symbol
+#Calculate the rayleigh criterion as a float
+rayleigh_criterion_val = rayleigh_criterion.subs([(x, vars_dict[x]["Value"])
+    for x in rayleigh_criterion.free_symbols])
+st.write("The rayleigh criterion is ", str(rayleigh_criterion_val), " radians")
+rayleigh_criterion_symbol = sympy.symbols("theta")
+vars_dict[rayleigh_criterion] = {"Value": rayleigh_criterion_val, 
+                                 "Symbol": rayleigh_criterion_symbol,
+"Definition": "the angular resolution in radians of the telescope on the cubesat perpendicular to the motion of the cubesat"}
+#print the result
+
 def get_vars(expression):
     return [x for x in expression.free_symbols]
 if st.button("Show work?"):
-    for x in get_vars(rayleigh_criterion):
+    vars = get_vars(rayleigh_criterion)
+    vars.append(rayleigh_criterion)
+    st.write("$$\\Large " + sympy.latex(vars_dict[rayleigh_criterion]["Symbol"])
+     + " = " + sympy.latex(rayleigh_criterion) + "$$")
+    for x in vars:
         val_str = str(vars_dict[x]["Value"])
         if "e" in str(vars_dict[x]["Value"]):
             floats, oom = val_str.split("e")
-            st.write("$ "+ sympy.latex(x), "$ is ", vars_dict[x]["Definition"], 
-                 " and has a value of $", floats, "\\times 10^{", 
+            floats = float(floats)
+            st.write("$ "+ sympy.latex(vars_dict[x]["Symbol"]), " $ is ", vars_dict[x]["Definition"], 
+                 " and has a value of $", str(np.round(floats,4)), "\\times 10^{", 
                  str(int(oom)), "}$")
         else:
+            val_str = str(np.round(vars_dict[x]["Value"],2))
             st.write("$ "+ sympy.latex(x), "$ is ", vars_dict[x]["Definition"], 
                  " and has a value of $", val_str, "$")
-    st.write("$$\\Large" + sympy.latex(rayleigh_criterion) + "$$")
+            val_str = str(vars_dict[x]["Value"])
 scale_factors = [2**n for n in range(10)]
 for n in range(16):
     scale_factors.append(1.5**(n+1))
@@ -181,8 +198,7 @@ P = np.sqrt(4 * np.pi**2 * a_center_earth**3 / (G*M))
 v = np.sqrt(G*M/a_center_earth) #meters per second
 orbit_fraction = time_exposure / P #meters
 distance_swept_on_Earth = orbit_fraction * R_earth * 2 * np.pi
-wavelength_approx = 1560 * 10**-9 # meters
-radians_viewed = (1.22 * (wavelength_approx / cubesat_aperture))
+radians_viewed = float(rayleigh_criterion_val)
 fov_radius_meters = radians_viewed * a_surface / 2
 solid_angle_viewed = radians_viewed**2 #steradians
 photon_energy = 10**-34 * 6.626 * 299792458 / (1560 * 10**-9) #joules
