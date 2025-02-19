@@ -13,7 +13,8 @@ value=600, placeholder="Type a number...")
 st.write("Entered cubesat orbit altitude: ", str(a_surface_km), " km")
 cubesat_aperture_cm = st.number_input(
 "Please enter the aperture of the primary optic of the cubesat in cm",
-value=10, placeholder="Type a number...") 
+value=10, placeholder="Type a number...")
+cubesat_aperture_m = cubesat_aperture_cm * 10**-2 
 st.write("Entered cubesat aperture: ", str(cubesat_aperture_cm), " cm")
 time_exposure = st.number_input(
 "Please enter the exposure time of the Cubesat's Detector in seconds",
@@ -21,14 +22,28 @@ value=0.1, placeholder="Type a number...")
 st.write("Entered cubesat exposure time: ", str(time_exposure), " seconds")
 #now convert to kilograms, meters, and seconds SI.
 cubesat_aperture, a_surface = cubesat_aperture_cm * 10**-2, a_surface_km * 10**3
-D = sympy.symbols("D")
-lam = sympy.symbols("lambda")
-lam_def, lam_val = sympy.symbols("lambda"), 1560
-formula = 1.22 * lam / D
+D, lam = sympy.symbols("D"), sympy.symbols("lambda")
+lam_symbol, lam_val = sympy.symbols("lambda"), 1.662 * 10**-6
+lam_def = "the center wavelength, in meters, of the AWG photonic chip"
+D_symbol, D_val = sympy.symbols("D"), cubesat_aperture_m
+D_def = "the diameter of the telescope's primary optic in meters"
+vars_dict = {} 
+vars_dict[lam], vars_dict[D] = {"Definition": lam_def, "Value": lam_val}, {"Definition": D_def, "Value": D_val}
+rayleigh_criterion = 1.22 * lam / D
 def get_vars(expression):
-    return [x for x in expression.free_symbols] 
+    return [x for x in expression.free_symbols]
 if st.button("Show work?"):
-    st.write("Where $$\\Large" + sympy.latex(formula) + "$$")
+    for x in get_vars(rayleigh_criterion):
+        val_str = str(vars_dict[x]["Value"])
+        if "e" in str(vars_dict[x]["Value"]):
+            floats, oom = val_str.split("e")
+            st.write("$ "+ sympy.latex(x), "$ is ", vars_dict[x]["Definition"], 
+                 " and has a value of $", floats, "\\times 10^{", 
+                 str(int(oom)), "}$")
+        else:
+            st.write("$ "+ sympy.latex(x), "$ is ", vars_dict[x]["Definition"], 
+                 " and has a value of $", val_str, "$")
+    st.write("$$\\Large" + sympy.latex(rayleigh_criterion) + "$$")
 scale_factors = [2**n for n in range(10)]
 for n in range(16):
     scale_factors.append(1.5**(n+1))
