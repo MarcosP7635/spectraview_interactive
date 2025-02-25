@@ -9,11 +9,11 @@ st.title(
 "Interactive Web Application to Plot the Peformance of Drones and Cubesats Using AWG Photonic Chips")
 a_surface_km = st.number_input(
 "Please enter the altitude of the Cubesat Orbit in kilometers",
-value=600, placeholder="Type a number...") 
+value=600.0, placeholder="Type a number...") 
 st.write("Entered cubesat orbit altitude: ", str(a_surface_km), " km")
 cubesat_aperture_cm = st.number_input(
 "Please enter the aperture of the primary optic of the cubesat in cm",
-value=10, placeholder="Type a number...", step=1.,format="%.2f")
+value=10.0, placeholder="Type a number...")
 cubesat_aperture_m = cubesat_aperture_cm * 10**-2 
 st.write("Entered cubesat aperture: ", str(cubesat_aperture_cm), " cm")
 time_exposure = st.number_input(
@@ -52,7 +52,7 @@ orbit_fraction = time_exposure / P #meters
 distance_swept_on_Earth = orbit_fraction * R_earth * 2 * np.pi
 solid_angle_viewed = radians_viewed**2 #steradians
 area = ((cubesat_aperture/2)**2) * np.pi #square meters
-solid_angle_of_telescope_viewed_by_Earth = area / (a_surface**2) #steradians
+solid_angle_of_telescope_viewed_by_Earth = radians_viewed * a_surface #steradians
 side_length_pixel_perp_to_orbit_dir = 2 * fov_radius_meters 
 st.write("The side length of the pixel in the direction perpendicular to the orbit direction is " + str(np.round(
     side_length_pixel_perp_to_orbit_dir)) + " meters.")
@@ -253,7 +253,8 @@ count_difference = time_exposure * (
 st.write("Difference in counts: ", count_difference)
 st.write("Photon Noise in counts: ", 
       np.sqrt(time_exposure * np.min(counts_per_second_arrs_dict[scale_factors[index]])))
-if count_difference > np.sqrt(time_exposure * np.min(counts_per_second_arrs_dict[scale_factors[index]])):
+if count_difference > np.sqrt(time_exposure * 
+    np.min(counts_per_second_arrs_dict[scale_factors[index]])):
     st.write("We are sensitive to that difference in counts!")
 else:
     st.write("The difference in counts is less than the photon noise.")
