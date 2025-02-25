@@ -13,7 +13,7 @@ value=600, placeholder="Type a number...")
 st.write("Entered cubesat orbit altitude: ", str(a_surface_km), " km")
 cubesat_aperture_cm = st.number_input(
 "Please enter the aperture of the primary optic of the cubesat in cm",
-value=10, placeholder="Type a number...")
+value=10, placeholder="Type a number...", step=1.,format="%.2f")
 cubesat_aperture_m = cubesat_aperture_cm * 10**-2 
 st.write("Entered cubesat aperture: ", str(cubesat_aperture_cm), " cm")
 time_exposure = st.number_input(
@@ -40,7 +40,27 @@ vars_dict[rayleigh_criterion] = {"Value": rayleigh_criterion_val,
                                  "Symbol": rayleigh_criterion_symbol,
 "Definition": "the angular resolution in radians of the telescope on the cubesat perpendicular to the motion of the cubesat"}
 #print the result
-
+radians_viewed = float(rayleigh_criterion_val)
+fov_radius_meters = radians_viewed * a_surface / 2
+M = 5.9721679 * 10**24 #kg
+G = 6.6743 * 10**-11 #m^3 kg^-1 s^-2
+R_earth = 6378100 #m
+a_center_earth = a_surface + R_earth
+P = np.sqrt(4 * np.pi**2 * a_center_earth**3 / (G*M))
+v = np.sqrt(G*M/a_center_earth) #meters per second
+orbit_fraction = time_exposure / P #meters
+distance_swept_on_Earth = orbit_fraction * R_earth * 2 * np.pi
+solid_angle_viewed = radians_viewed**2 #steradians
+area = ((cubesat_aperture/2)**2) * np.pi #square meters
+solid_angle_of_telescope_viewed_by_Earth = area / (a_surface**2) #steradians
+side_length_pixel_perp_to_orbit_dir = 2 * fov_radius_meters 
+st.write("The side length of the pixel in the direction perpendicular to the orbit direction is " + str(np.round(
+    side_length_pixel_perp_to_orbit_dir)) + " meters.")
+st.write("The side length of the pixel in the direction parallel to the orbit direction is " + str(np.round(
+    distance_swept_on_Earth, 1)) + " meters.")
+st.write("So the pixel size is " + str(np.round(
+    side_length_pixel_perp_to_orbit_dir)) + " meters by " +
+    str(np.round(distance_swept_on_Earth, 1)) + " meters.")
 def get_vars(expression):
     return [x for x in expression.free_symbols]
 if st.button("Show work?"):
@@ -190,21 +210,7 @@ awg_channels_avg_irr_arrs_dict = {}
 for sf in scale_factors:
     awg_channels_avg_irr_arrs_dict[sf] = get_avg_awg_radiance(
         awg_channels_avg_transmi_arrs_dict[sf], solar_radiances)
-M = 5.9721679 * 10**24 #kg
-G = 6.6743 * 10**-11 #m^3 kg^-1 s^-2
-R_earth = 6378100 #m
-a_center_earth = a_surface + R_earth
-P = np.sqrt(4 * np.pi**2 * a_center_earth**3 / (G*M))
-v = np.sqrt(G*M/a_center_earth) #meters per second
-orbit_fraction = time_exposure / P #meters
-distance_swept_on_Earth = orbit_fraction * R_earth * 2 * np.pi
-radians_viewed = float(rayleigh_criterion_val)
-fov_radius_meters = radians_viewed * a_surface / 2
-solid_angle_viewed = radians_viewed**2 #steradians
 photon_energy = 10**-34 * 6.626 * 299792458 / (1560 * 10**-9) #joules
-area = ((cubesat_aperture/2)**2) * np.pi #square meters
-solid_angle_of_telescope_viewed_by_Earth = area / (a_surface**2) #steradians
-side_length_pixel_perp_to_orbit_dir = 2 * fov_radius_meters 
 #resolveable distance in meters 
 
 st.write("Thus the pixel size is " + str(np.round(
@@ -212,6 +218,23 @@ st.write("Thus the pixel size is " + str(np.round(
     str(np.round(distance_swept_on_Earth, 1)) + " meters.")
 
 def w_per_m2_to_counts_per_second(w_per_m2_arr):
+    """
+    Convert a list of average irradance values from W/m2 to a list of 
+    average counts per second for each spectral channel of the AWG 
+    photonic chip.
+
+    Parameters
+    ----------
+    w_per_m2_arr : list
+        Average irradance values in W/m2 for each spectral channel of the AWG 
+        photonic chip.
+
+    Returns
+    -------
+    list
+        Average counts per second for each spectral channel of the AWG 
+        photonic chip.
+    """
     return [x * (fov_radius_meters**2) * 
     solid_angle_of_telescope_viewed_by_Earth / photon_energy
     for x in w_per_m2_arr]
