@@ -192,8 +192,8 @@ for i in range(len(scale_factors)):
     sf = scale_factors[i]
     wavelen_arrs_dict[sf], transmi_arrs_dict[sf] = read_spectralcalc_output(file_paths[i])
     equal_lengths[sf] = len(wavelen_arrs_dict[sf]) == len(transmi_arrs_dict[sf])
-def get_channel_avg_transmi_squared(transmi_arr):
-    return [np.average(transmi_arr[smallest_neighbors[i][0]:
+def get_channel_avg_transmi_squared(transmi_arr_input):
+    return [np.average(transmi_arr_input[smallest_neighbors[i][0]:
     smallest_neighbors[i+1][0]]) **2 for i in range(20)]
 awg_channels_avg_transmi_arrs_dict = {}
 for sf in scale_factors:
