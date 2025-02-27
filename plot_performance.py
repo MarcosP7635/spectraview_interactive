@@ -9,7 +9,7 @@ st.title(
 "Interactive Web Application to Plot the Peformance of Drones and Cubesats Using AWG Photonic Chips")
 a_surface_km = st.number_input(
 "Please enter the altitude of the Cubesat Orbit in kilometers",
-value=600.0, placeholder="Type a number...") 
+value=500.0, placeholder="Type a number...") 
 st.write("Entered cubesat orbit altitude: ", str(a_surface_km), " km")
 cubesat_aperture_cm = st.number_input(
 "Please enter the aperture of the primary optic of the cubesat in cm",
@@ -52,7 +52,7 @@ orbit_fraction = time_exposure / P #meters
 distance_swept_on_Earth = orbit_fraction * R_earth * 2 * np.pi
 solid_angle_viewed = radians_viewed**2 #steradians
 area = ((cubesat_aperture/2)**2) * np.pi #square meters
-solid_angle_of_telescope_viewed_by_Earth = radians_viewed * a_surface #steradians
+solid_angle_of_telescope_viewed_by_Earth = np.pi * (cubesat_aperture/2)**2 / (a_surface**2) #steradians
 side_length_pixel_perp_to_orbit_dir = 2 * fov_radius_meters 
 st.write("The side length of the pixel in the direction perpendicular to the orbit direction is " + str(np.round(
     side_length_pixel_perp_to_orbit_dir)) + " meters.")
@@ -234,9 +234,11 @@ def w_per_m2_to_counts_per_second(w_per_m2_arr):
     list
         Average counts per second for each spectral channel of the AWG 
         photonic chip.
+
+    Need to account for reflectivity of the ground.
     """
     return [x * (fov_radius_meters**2) * 
-    solid_angle_of_telescope_viewed_by_Earth / photon_energy
+    solid_angle_of_telescope_viewed_by_Earth / (2 * np.pi * photon_energy)
     for x in w_per_m2_arr]
 counts_per_second_arrs_dict = {}
 for sf in scale_factors:
@@ -244,21 +246,26 @@ for sf in scale_factors:
         awg_channels_avg_irr_arrs_dict[sf])
 all_scales_counts_per_second = [x for x in counts_per_second_arrs_dict.values()]
 
-index = 2
-st.write("So the total difference in the number of counts per second between background methane and " 
-     + str((np.round((scale_factors[index]-1)*100, 3))) + "% more methane is" )
-count_difference = time_exposure * (
-    np.sum(counts_per_second_arrs_dict[scale_factors[0]]) - 
-    np.sum(counts_per_second_arrs_dict[scale_factors[index]]))
-st.write("Difference in counts: ", count_difference)
-st.write("Photon Noise in counts: ", 
-      np.sqrt(time_exposure * np.min(counts_per_second_arrs_dict[scale_factors[index]])))
-if count_difference > np.sqrt(time_exposure * 
-    np.min(counts_per_second_arrs_dict[scale_factors[index]])):
-    st.write("We are sensitive to that difference in counts!")
-else:
-    st.write("The difference in counts is less than the photon noise.")
-
+def is_detectable(index):
+    st.write("So the total difference in the number of counts per second between background methane and " 
+        + str((np.round((scale_factors[index]-1)*100, 3))) + "% more methane is" )
+    count_difference = time_exposure * (
+        np.sum(counts_per_second_arrs_dict[scale_factors[0]]) - 
+        np.sum(counts_per_second_arrs_dict[scale_factors[index]]))
+    st.write("Difference in counts: ", count_difference)
+    st.write("Photon Noise in counts: ", 
+        np.sqrt(time_exposure * np.min(counts_per_second_arrs_dict[scale_factors[index]])))
+    sensitive = (count_difference > np.sqrt(time_exposure * 
+        np.min(counts_per_second_arrs_dict[scale_factors[index]])))
+    if sensitive:
+        st.write("We are sensitive to that difference in counts!")
+    else:
+        st.write("The difference in counts is less than the photon noise.")
+    return sensitive
+start_index = 1
+for i in range(start_index, len(scale_factors)): 
+    if is_detectable(i):
+        break
 
 
 
