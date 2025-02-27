@@ -34,7 +34,6 @@ vars_dict[lam]["Symbol"], vars_dict[D]["Symbol"] = lam_symbol, D_symbol
 #Calculate the rayleigh criterion as a float
 rayleigh_criterion_val = rayleigh_criterion.subs([(x, vars_dict[x]["Value"])
     for x in rayleigh_criterion.free_symbols])
-st.write("The rayleigh criterion is ", str(rayleigh_criterion_val), " radians")
 rayleigh_criterion_symbol = sympy.symbols("theta")
 vars_dict[rayleigh_criterion] = {"Value": rayleigh_criterion_val, 
                                  "Symbol": rayleigh_criterion_symbol,
@@ -252,21 +251,38 @@ def is_detectable(index):
     count_difference = time_exposure * (
         np.sum(counts_per_second_arrs_dict[scale_factors[0]]) - 
         np.sum(counts_per_second_arrs_dict[scale_factors[index]]))
+    photon_noise = np.sqrt(time_exposure * 
+        np.sum(counts_per_second_arrs_dict[scale_factors[0]]))
     st.write("Difference in counts: ", count_difference)
-    st.write("Photon Noise in counts: ", 
-        np.sqrt(time_exposure * np.min(counts_per_second_arrs_dict[scale_factors[index]])))
-    sensitive = (count_difference > np.sqrt(time_exposure * 
-        np.min(counts_per_second_arrs_dict[scale_factors[index]])))
+    st.write("Photon Noise in counts: ", photon_noise)
+    sensitive = (count_difference > photon_noise)
     if sensitive:
         st.write("We are sensitive to that difference in counts!")
     else:
         st.write("The difference in counts is less than the photon noise.")
-    return sensitive
+    output_dict = {
+        "count_difference": count_difference,
+        "photon_noise": photon_noise,
+        "detectable": sensitive
+    }
+    return output_dict
 start_index = 1
 for i in range(start_index, len(scale_factors)): 
-    if is_detectable(i):
+    stats_dict = is_detectable(i)
+    if stats_dict["detectable"]:
         break
-
-
-
-
+background_methane_moles_per_square_meter = 0.7
+excess_methane_moles_per_square_meter = ((scale_factors[i] - 1) * 
+background_methane_moles_per_square_meter)
+avg_wind_speed_meters_per_second = 3.5
+time_to_move_methane = side_length_pixel_perp_to_orbit_dir / avg_wind_speed_meters_per_second
+max_approx_flow_rate_leak_moles_per_second = (excess_methane_moles_per_square_meter / 
+time_to_move_methane)
+min_leak_detected_kg_per_hour = max_approx_flow_rate_leak_moles_per_second * 0.016 * 3600
+#Difference in photon counts plus or minus photon noise
+snr = stats_dict["photon_noise"]
+uncertainty = 1 / snr
+uncertainty_kg_per_hour = min_leak_detected_kg_per_hour * uncertainty
+st.write("That would be a leak with a flow rate less than " + 
+str(min_leak_detected_kg_per_hour) + "$ \\pm $ " + 
+str(uncertainty_kg_per_hour) + " kg/h")
