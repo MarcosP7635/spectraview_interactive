@@ -258,6 +258,7 @@ def is_detectable(index):
     photon_noise = np.sqrt(photon_noise_background_measurement**2 + 
         photon_noise_not_from_background**2)
     #error propagation since these would be independent measurements
+    #photon noise is essentiall the standard deviation
     st.write("Difference in counts: ", count_difference)
     st.write("Photon Noise in counts: ", photon_noise)
     sensitive = (count_difference > photon_noise)
@@ -276,18 +277,21 @@ for i in range(start_index, len(scale_factors)):
     stats_dict = is_detectable(i)
     if stats_dict["detectable"]:
         break
-background_methane_moles_per_square_meter = 0.7
-excess_methane_moles_per_square_meter = ((scale_factors[i] - 1) * 
-background_methane_moles_per_square_meter)
+excess_scale_factor = scale_factors[i] - 1
 avg_wind_speed_meters_per_second = 3.5
-time_to_move_methane = (side_length_pixel_perp_to_orbit_dir / 
-    avg_wind_speed_meters_per_second)
-max_approx_flow_rate_leak_moles_per_second = (excess_methane_moles_per_square_meter / 
-    time_to_move_methane)
-min_leak_detected_kg_per_hour = max_approx_flow_rate_leak_moles_per_second * 0.016 * 3600
-#Difference in photon counts plus or minus photon noise
-uncertainty_kg_per_hour = (min_leak_detected_kg_per_hour * stats_dict["photon_noise"] 
-                           / stats_dict["count_difference"])
+def excess_methane_scale_factor_to_max_flow_rate_kg_per_hour(excess_methane, distance, wind_speed):
+    '''
+    Earth's atmospheric columns average 0.7 moles per square meter
+    We estimate the same order of the flow rate is excess methane/(distance/wind_speed)
+    Methane has a molar mass of 0.016 kg and there are 3600 seconds in an hour
+    '''
+    return excess_methane * 0.7 * 0.016 * 3600 / (distance / wind_speed)
+min_leak_detected_kg_per_hour = excess_methane_scale_factor_to_max_flow_rate_kg_per_hour(
+    excess_scale_factor, distance_swept_on_Earth, avg_wind_speed_meters_per_second
+)
+#now to do error propagation by finding the conversion factor between the count difference and the flow rate
+error_prop_coefficient = stats_dict["count_difference"] / min_leak_detected_kg_per_hour 
+uncertainty_kg_per_hour = error_prop_coefficient * stats_dict["photon_noise"] 
 st.write("That would be a leak with a flow rate less than " + 
 str(min_leak_detected_kg_per_hour) + "$ \\pm $ " + 
 str(uncertainty_kg_per_hour) + " kg/h")
