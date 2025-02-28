@@ -251,8 +251,13 @@ def is_detectable(index):
     count_difference = time_exposure * (
         np.sum(counts_per_second_arrs_dict[scale_factors[0]]) - 
         np.sum(counts_per_second_arrs_dict[scale_factors[index]]))
-    photon_noise = np.sqrt(time_exposure * 
+    photon_noise_background_measurement = np.sqrt(time_exposure * 
         np.sum(counts_per_second_arrs_dict[scale_factors[0]]))
+    photon_noise_not_from_background = np.sqrt(time_exposure *
+        np.sum(counts_per_second_arrs_dict[scale_factors[index]]))
+    photon_noise = np.sqrt(photon_noise_background_measurement**2 + 
+        photon_noise_not_from_background**2)
+    #error propagation since these would be independent measurements
     st.write("Difference in counts: ", count_difference)
     st.write("Photon Noise in counts: ", photon_noise)
     sensitive = (count_difference > photon_noise)
@@ -275,14 +280,14 @@ background_methane_moles_per_square_meter = 0.7
 excess_methane_moles_per_square_meter = ((scale_factors[i] - 1) * 
 background_methane_moles_per_square_meter)
 avg_wind_speed_meters_per_second = 3.5
-time_to_move_methane = side_length_pixel_perp_to_orbit_dir / avg_wind_speed_meters_per_second
+time_to_move_methane = (side_length_pixel_perp_to_orbit_dir / 
+    avg_wind_speed_meters_per_second)
 max_approx_flow_rate_leak_moles_per_second = (excess_methane_moles_per_square_meter / 
-time_to_move_methane)
+    time_to_move_methane)
 min_leak_detected_kg_per_hour = max_approx_flow_rate_leak_moles_per_second * 0.016 * 3600
 #Difference in photon counts plus or minus photon noise
-snr = stats_dict["photon_noise"]
-uncertainty = 1 / snr
-uncertainty_kg_per_hour = min_leak_detected_kg_per_hour * uncertainty
+uncertainty_kg_per_hour = (min_leak_detected_kg_per_hour * stats_dict["photon_noise"] 
+                           / stats_dict["count_difference"])
 st.write("That would be a leak with a flow rate less than " + 
 str(min_leak_detected_kg_per_hour) + "$ \\pm $ " + 
 str(uncertainty_kg_per_hour) + " kg/h")
