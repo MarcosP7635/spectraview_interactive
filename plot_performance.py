@@ -245,6 +245,48 @@ for sf in scale_factors:
         awg_channels_avg_irr_arrs_dict[sf])
 all_scales_counts_per_second = [x for x in counts_per_second_arrs_dict.values()]
 
+
+def calc_min_leak_kg_per_hour(SNR, distance, wind_speed):
+    '''
+    Earth's atmospheric columns average 0.7 moles per square meter
+    We estimate the same order of the flow rate is excess methane/(distance/wind_speed)
+    Methane has a molar mass of 0.016 kg and there are 3600 seconds in an hour
+    '''
+    '''
+    Above method didn't work
+    $W$ is the size of the region, $Q$ is the flow rate. Similarly, we can rearrange and use the SNR $\sigma$ to find the minimum detectable flow rate
+    \begin{align}
+    Q_{\text{min}} = \frac{M_{\text{CH}_4}UWp\sigma}{gM_\text{a}}
+    \end{align}
+    Which agrees with Equation 14 from Jacobs et al. 2016.  https://doi.org/10.5194/acp-16-14371-2016
+
+    They further multiply some dimensionless $q$ where "q takes on values of 2 for detection and 5 for quantification."
+    Please enter values in units of kg, hour, m, and m/hour
+    Sigma is the uncertainty or 1/SNR
+    '''
+    #return excess_methane * 0.7 * 0.016 * 3600 / (distance / wind_speed)
+    background_methane_fraction = 1921.72 * (10**-9) #moles of methane per mole of dry air
+    p = 101325 #pascals
+    mCH4 = 0.016 #kg / mol
+    mAir = 0.029 #kg / mol
+    q_detect = 2 #dimensionless
+    g = 9.81 #meters / seconds^2
+    #pascals are really just kg/(m * seconds^2) , so the seconds^2 cancels from g
+    return distance * wind_speed * mCH4 * q_detect * p * background_methane_fraction / (
+        SNR * mAir * g)
+SNR =  np.sum(counts_per_second_arrs_dict[scale_factors[0]])
+avg_wind_speed_meters_per_second = 3.5
+avg_wind_speed_meters_per_hour = avg_wind_speed_meters_per_second * 3600
+min_leak_detected_kg_per_hour = (calc_min_leak_kg_per_hour(SNR, 
+    distance_swept_on_Earth, avg_wind_speed_meters_per_hour)
+)
+
+st.write("Per Jacobs et al. 2016 Equation 14 [https://doi.org/10.5194/acp-16-14371-2016] " , 
+"the minimum detectable flow rate based on mass balance is " + 
+str(min_leak_detected_kg_per_hour) + "$ \\pm $ " + 
+str(min_leak_detected_kg_per_hour / SNR) + " kg/h")
+
+#Now simulate if the photon noise is actually below that
 def is_detectable(index):
     st.write("So the total difference in the number of counts per second between background methane and " 
         + str((np.round((scale_factors[index]-1)*100, 3))) + "% more methane is" )
@@ -278,47 +320,15 @@ for i in range(start_index, len(scale_factors)):
     if stats_dict["detectable"]:
         break
 excess_scale_factor = scale_factors[i] - 1
-avg_wind_speed_meters_per_second = 3.5
-def calc_min_leak_kg_per_hour(SNR, distance, wind_speed):
-    '''
-    Earth's atmospheric columns average 0.7 moles per square meter
-    We estimate the same order of the flow rate is excess methane/(distance/wind_speed)
-    Methane has a molar mass of 0.016 kg and there are 3600 seconds in an hour
-    '''
-    '''
-    Above method didn't work
-    $W$ is the size of the region, $Q$ is the flow rate. Similarly, we can rearrange and use the SNR $\sigma$ to find the minimum detectable flow rate
-    \begin{align}
-    Q_{\text{min}} = \frac{M_{\text{CH}_4}UWp\sigma}{gM_\text{a}}
-    \end{align}
-    Which agrees with Equation 14 from Jacobs et al. 2016.  https://doi.org/10.5194/acp-16-14371-2016
 
-    They further multiply some dimensionless $q$ where "q takes on values of 2 for detection and 5 for quantification."
-    Please enter values in units of kg, hour, m, and m/hour
-    Sigma is the uncertainty or 1/SNR
-    '''
-    #return excess_methane * 0.7 * 0.016 * 3600 / (distance / wind_speed)
-    background_methane_fraction = 1921.72 * (10**-9) #moles of methane per mole of dry air
-    p = 101325 #pascals
-    mCH4 = 0.016 #kg / mol
-    mAir = 0.029 #kg / mol
-    q_detect = 2 #dimensionless
-    g = 9.81 #meters / seconds^2
-    #pascals are really just kg/(m * seconds^2) , so the seconds^2 cancels from g
-    return distance * wind_speed * mCH4 * q_detect * p * background_methane_fraction / (
-        SNR * mAir * g)
-
-min_leak_detected_kg_per_hour = excess_methane_scale_factor_to_max_flow_rate_kg_per_hour(
-    excess_scale_factor, distance_swept_on_Earth, avg_wind_speed_meters_per_second
-)
 #now to do error propagation by finding the conversion factor between the count difference and the flow rate
 #error_prop_coefficient = min_leak_detected_kg_per_hour / stats_dict["count_difference"]  
 #essentially repeating the same conversion we just did for the difference in counts but now for the photon noise
 #uncertainty_kg_per_hour = excess_methane_scale_factor_to_max_flow_rate_kg_per_hour(
 #    stats_dict["photon_noise"] * excess_scale_factor / stats_dict["count_difference"],
 #    distance_swept_on_Earth, avg_wind_speed_meters_per_second) 
-uncertainty_kg_per_hour = min_leak_detected_kg_per_hour * (
-    stats_dict["photon_noise"] / stats_dict["count_difference"])
-st.write("That would be a leak with a flow rate less than " + 
-str(min_leak_detected_kg_per_hour) + "$ \\pm $ " + 
-str(uncertainty_kg_per_hour) + " kg/h")
+##uncertainty_kg_per_hour = min_leak_detected_kg_per_hour * (
+#    stats_dict["photon_noise"] / stats_dict["count_difference"])
+#st.write("That would be a leak with a flow rate less than " + 
+#str(min_leak_detected_kg_per_hour) + "$ \\pm $ " + 
+#str(uncertainty_kg_per_hour) + " kg/h")
