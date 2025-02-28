@@ -290,7 +290,7 @@ min_leak_detected_kg_per_hour = excess_methane_scale_factor_to_max_flow_rate_kg_
     excess_scale_factor, distance_swept_on_Earth, avg_wind_speed_meters_per_second
 )
 #now to do error propagation by finding the conversion factor between the count difference and the flow rate
-error_prop_coefficient = stats_dict["count_difference"] / min_leak_detected_kg_per_hour 
+error_prop_coefficient = min_leak_detected_kg_per_hour / stats_dict["count_difference"]  
 uncertainty_kg_per_hour = error_prop_coefficient * stats_dict["photon_noise"] 
 st.write("That would be a leak with a flow rate less than " + 
 str(min_leak_detected_kg_per_hour) + "$ \\pm $ " + 
