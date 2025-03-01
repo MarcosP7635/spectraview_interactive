@@ -13,7 +13,7 @@ value=500.0, placeholder="Type a number...")
 st.write("Entered cubesat orbit altitude: ", str(a_surface_km), " km")
 cubesat_aperture_cm = st.number_input(
 "Please enter the aperture of the primary optic of the cubesat in cm",
-value=10.0, placeholder="Type a number...")
+value=5.0, placeholder="Type a number...")
 cubesat_aperture_m = cubesat_aperture_cm * 10**-2 
 st.write("Entered cubesat aperture: ", str(cubesat_aperture_cm), " cm")
 time_exposure = st.number_input(
@@ -247,23 +247,14 @@ all_scales_counts_per_second = [x for x in counts_per_second_arrs_dict.values()]
 
 
 def calc_min_leak_kg_per_hour(SNR, distance, wind_speed):
-    '''
-    Earth's atmospheric columns average 0.7 moles per square meter
-    We estimate the same order of the flow rate is excess methane/(distance/wind_speed)
-    Methane has a molar mass of 0.016 kg and there are 3600 seconds in an hour
-    '''
-    '''
-    Above method didn't work
-    $W$ is the size of the region, $Q$ is the flow rate. Similarly, we can rearrange and use the SNR $\sigma$ to find the minimum detectable flow rate
-    \begin{align}
-    Q_{\text{min}} = \frac{M_{\text{CH}_4}UWp\sigma}{gM_\text{a}}
-    \end{align}
-    Which agrees with Equation 14 from Jacobs et al. 2016.  https://doi.org/10.5194/acp-16-14371-2016
-
-    They further multiply some dimensionless $q$ where "q takes on values of 2 for detection and 5 for quantification."
-    Please enter values in units of kg, hour, m, and m/hour
-    Sigma is the uncertainty or 1/SNR
-    '''
+    #$W$ is the size of the region, $Q$ is the flow rate. Similarly, we can rearrange and use the SNR $\sigma$ to find the minimum detectable flow rate
+    #\begin{align}
+    #Q_{\text{min}} = \frac{M_{\text{CH}_4}UWp\sigma}{gM_\text{a}}
+    #\end{align}
+    #Which agrees with Equation 14 from Jacobs et al. 2016.  https://doi.org/10.5194/acp-16-14371-2016
+    #They further multiply some dimensionless $q$ where "q takes on values of 2 for detection and 5 for quantification."
+    #Please enter values in units of kg, hour, m, and m/hour
+    #Sigma is the uncertainty or 1/SNR
     #return excess_methane * 0.7 * 0.016 * 3600 / (distance / wind_speed)
     background_methane_fraction = 1921.72 * (10**-9) #moles of methane per mole of dry air
     p = 101325 #pascals
@@ -272,14 +263,17 @@ def calc_min_leak_kg_per_hour(SNR, distance, wind_speed):
     q_detect = 2 #dimensionless
     g = 9.81 #meters / seconds^2
     #pascals are really just kg/(m * seconds^2) , so the seconds^2 cancels from g
+    #Write down the dimensions by hand and then check using sympy
     return distance * wind_speed * mCH4 * q_detect * p * background_methane_fraction / (
         SNR * mAir * g)
-SNR =  np.sum(counts_per_second_arrs_dict[scale_factors[0]])
+SNR =  np.sqrt(time_exposure * np.sum(counts_per_second_arrs_dict[scale_factors[0]]))
+st.write("Signal to noise of measuring the concentration of background methane without",
+    " any leak is " + str(SNR))
 avg_wind_speed_meters_per_second = 3.5
-avg_wind_speed_meters_per_hour = avg_wind_speed_meters_per_second * 3600
+avg_wind_speed_meters_per_hour = avg_wind_speed_meters_per_second * 3600 #meters per hour
+#Fixed W! Consider that we have to consider a specific instant, not the whole exposure!   
 min_leak_detected_kg_per_hour = (calc_min_leak_kg_per_hour(SNR, 
-    distance_swept_on_Earth, avg_wind_speed_meters_per_hour)
-)
+    side_length_pixel_perp_to_orbit_dir, avg_wind_speed_meters_per_hour))
 
 st.write("Per Jacobs et al. 2016 Equation 14 [https://doi.org/10.5194/acp-16-14371-2016] " , 
 "the minimum detectable flow rate based on mass balance is " + 
