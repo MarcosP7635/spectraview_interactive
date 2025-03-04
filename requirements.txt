@@ -4,3 +4,4 @@ ipywidgets==8.0
 voila
 plotly
 sympy
+json
