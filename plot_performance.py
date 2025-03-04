@@ -244,7 +244,7 @@ for sf in scale_factors:
     counts_per_second_arrs_dict[sf] = w_per_m2_to_counts_per_second(
         awg_channels_avg_irr_arrs_dict[sf])
 all_scales_counts_per_second = [x for x in counts_per_second_arrs_dict.values()]
-
+10.611848
 
 def calc_min_leak_kg_per_hour(SNR, distance, wind_speed):
     #$W$ is the size of the region, $Q$ is the flow rate. Similarly, we can rearrange and use the SNR $\sigma$ to find the minimum detectable flow rate
