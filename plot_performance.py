@@ -63,8 +63,8 @@ vars_dict[resolved_distance] = {"Value": resolved_distance_val,
 "Definition": ("the angular resolution in radians of the telescope on the cubesat perpendicular to the " +
     " motion of the cubesat")}
 #print the result
-radians_viewed = float(resolved_distance_val)
-fov_radius_meters = radians_viewed * a_surface / 2
+radians_viewed = float(resolved_distance_val) / a_surface
+fov_radius_meters = resolved_distance_val / 2
 M = 5.9721679 * 10**24 #kg
 G = 6.6743 * 10**-11 #m^3 kg^-1 s^-2
 R_earth = 6378100 #m
@@ -160,6 +160,11 @@ def calc_min_leak_kg_per_hour(SNR, distance, wind_speed):
 SNR =  np.sqrt(time_exposure * np.sum(counts_per_second_arrs_dict[scale_factors[0]]))
 avg_wind_speed_meters_per_second = 3.5
 avg_wind_speed_meters_per_hour = avg_wind_speed_meters_per_second * 3600 #meters per hour
+min_flow_rate = calc_min_leak_kg_per_hour(SNR, side_length_pixel_perp_to_orbit_dir, 
+    avg_wind_speed_meters_per_hour)
+st.write("Since the Signal-to-Noise Ratio (SNR) is " + str(np.round(SNR, 2)) + 
+", the smallest methane leak we can detect has a flow rate of " + 
+str(min_flow_rate) + " kg/hour.")
 #Fixed W! Consider that we have to consider a specific instant, not the whole exposure!   
 #return [side_length_pixel_perp_to_orbit_dir, distance_swept_on_Earth, 
 #    calc_min_leak_kg_per_hour(SNR, side_length_pixel_perp_to_orbit_dir, 
