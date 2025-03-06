@@ -169,3 +169,80 @@ str(min_flow_rate) + " kg/hour.")
 #return [side_length_pixel_perp_to_orbit_dir, distance_swept_on_Earth, 
 #    calc_min_leak_kg_per_hour(SNR, side_length_pixel_perp_to_orbit_dir, 
 #                                    avg_wind_speed_meters_per_hour)]
+
+t, n_dot = sympy.symbols("t"), sympy.symbols("(dn/dt)")
+W, U, sigma = sympy.symbols("D"), sympy.symbols("lambda"), sympy.sqrt(t*n)
+t_symbol, t_val = sympy.symbols("t"), time_exposure
+t_def = "the exposure time of the detector in seconds"
+n_dot_symbol, n_dot_val = sympy.symbols("(dn/dt)"), np.float64(np.sum(counts_per_second_arrs_dict[scale_factors[0]]))
+n_dot_def = "the average number of photons per second incident on the detector summed over every spectral channel"
+W_symbol, W_val = sympy.symbols("D"), side_length_pixel_perp_to_orbit_dir
+W_def = "the side length of the pixel in the direction perpendicular to the orbit direction in meters"
+U_symbol, U_val = sympy.symbols("lambda"), avg_wind_speed_meters_per_hour
+U_def = "the average wind speed in meters per hour"
+sigma_symbol, sigma_val = sympy.symbols("sigma"), 1/SNR
+sigma_def = "the uncertainty in the measurement, taken to be 1/SNR, where SNR is the signal-to-noise ratio"
+
+flow_vars_dict = {} 
+flow_vars_dict[t], flow_vars_dict[n_dot] = {"Definition": t_def, "Value": t_val}, {"Definition": n_dot_def, 
+    "Value": n_dot_val}
+flow_vars_dict[W], flow_vars_dict[U], flow_vars_dict[sigma] = {"Definition": W_def, "Value": W_val}, {"Definition": U_def, 
+    "Value": U_val}, {"Definition": sigma_def, "Value": sigma_val}
+flow_vars_dict[t]["Symbol"], flow_vars_dict[n_dot]["Symbol"], flow_vars_dict[W]["Symbol"], flow_vars_dict[U]["Symbol"], flow_vars_dict[sigma]["Symbol"] = t_symbol, n_dot_symbol, W_symbol, U_symbol, sigma_symbol
+
+pressure, massCH4, massAir = sympy.symbols("p"), sympy.symbols("m_{\\text{CH}_4}"), sympy.symbols("m_\\text{air}")
+g, g_val = sympy.symbols("g"), 9.81
+g_def = "the acceleration due to gravity in meters per second^2"
+p_def = "the pressure in pascals"
+massCH4_def = "the molar mass of methane in kilograms"
+massAir_def = "the molar mass of air in kilograms per mole"
+p_val, massCH4_val, massAir_val = 101325, 0.016, 0.029
+f, f_symbol = sympy.symbols("f"), sympy.symbols("f")
+f_val = 1921.72 * (10**-9) #moles of methane per mole of dry air
+f_dev = ("fraction of moles of dry air that are methane on " + 
+    "average on Earth in an atmospeheric column ")
+
+flow_vars_dict[pressure], flow_vars_dict[massCH4], flow_vars_dict[massAir] = {"Definition": p_def, "Value": p_val}, {"Definition": massCH4_def, 
+    "Value": massCH4_val}, {"Definition": massAir_def, "Value": massAir_val}
+pressure_symbol, massCH4_symbol, massAir_symbol = sympy.symbols("p"), sympy.symbols("m_{\\text{CH}_4}"), sympy.symbols("m_\\text{air}")
+flow_vars_dict[pressure]["Symbol"], flow_vars_dict[massCH4]["Symbol"], vars_dict[massAir]["Symbol"] = pressure_symbol, massCH4_symbol, massAir_symbol
+flow_vars_dict[g] = {"Definition": g_def, "Value": g_val}
+flow_vars_dict[g]["Symbol"] = sympy.symbols("g")
+flow_vars_dict[f] = {"Definition": f_dev, "Value": f_val}
+flow_vars_dict[f]["Symbol"] = sympy.symbols("f")
+
+Q = sympy.symbols("Q")
+q_detect = 2 #dimensionless
+Q_expr = U * W * massCH4 * q_detect * pressure * f / (
+SNR * massAir * g)
+#Q = distance * wind_speed * mCH4 * q_detect * p * background_methane_fraction / (
+#SNR * mAir * g
+
+#Calculate the rayleigh criterion as a float
+min_flow_rate_detected_val = np.float64(Q_expr.subs([(x, vars_dict[x]["Value"])
+    for x in Q_expr.free_symbols], numpy=True))
+resolved_distance_symbol = sympy.symbols("L")
+flow_vars_dict[Q] = {"Value": min_flow_rate_detected_val, 
+    "Symbol": sympy.symbols("Q"),
+"Definition": ("The flow rate in kilograms per hour of the smallest methane " + 
+    "leak that the satellite can detect ")}
+
+
+if st.button("Show work for the threshold flow rate?"):
+    vars = get_vars(Q_expr)
+    vars.append(Q)
+    st.write("$$\\Large " + sympy.latex(Q) + " = " + sympy.latex(Q_expr) + " $$")
+    for x in vars:
+        val_str = str(flow_vars_dict[x]["Value"])
+        if "e" in str(flow_vars_dict[x]["Value"]):
+            floats, oom = val_str.split("e")
+            floats = float(floats)
+            st.write("$ "+ sympy.latex(flow_vars_dict[x]["Symbol"]), " $ is ", flow_vars_dict[x]["Definition"], 
+                 " and has a value of $", str(np.round(floats,4)), "\\times 10^{", 
+                 str(int(oom)), "}$")
+        else:
+            val_str = str(np.round(flow_vars_dict[x]["Value"],2))
+            st.write("$ "+ sympy.latex(x), "$ is ", flow_vars_dict[x]["Definition"], 
+                 " and has a value of $", val_str, "$")
+            val_str = str(flow_vars_dict[x]["Value"])
+
