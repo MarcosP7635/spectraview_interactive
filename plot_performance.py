@@ -8,6 +8,10 @@ import json
 
 st.title(
 "Interactive Web Application to Plot the Peformance of Drones and Cubesats Using AWG Photonic Chips")
+satellite_number = st.number_input("Please enter the number of satellites", 
+                value=1, placeholder="Type a number...", step=1)
+st.write("Using a polar orbit with a period of 90 minutes, any site on Earth can be visited"
+      +   " every " + str(43200 / (3600 * satellite_number)) + " hours.")
 a_surface_km = st.number_input(
 "Please enter the altitude of the Cubesat Orbit in kilometers",
 value=500.0, placeholder="Type a number...", step=25.0) 
