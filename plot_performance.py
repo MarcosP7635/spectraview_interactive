@@ -10,20 +10,20 @@ st.title(
 "Interactive Web Application to Plot the Peformance of Drones and Cubesats Using AWG Photonic Chips")
 a_surface_km = st.number_input(
 "Please enter the altitude of the Cubesat Orbit in kilometers",
-value=500.0, placeholder="Type a number...") 
+value=500.0, placeholder="Type a number...", step=25.0) 
 st.write("Entered cubesat orbit altitude: ", str(a_surface_km), " km")
 cubesat_aperture_cm = st.number_input(
 "Please enter the aperture of the primary optic of the cubesat in cm",
-value=5.0, placeholder="Type a number...")
+value=5.0, placeholder="Type a number...", step=1.0)
 cubesat_aperture_m = cubesat_aperture_cm * 10**-2 
 st.write("Entered cubesat aperture: ", str(cubesat_aperture_cm), " cm")
-time_exposure = st.number_input(
-"Please enter the exposure time of the Cubesat's Detector in seconds",
-value=0.1, placeholder="Type a number...") 
-st.write("Entered cubesat exposure time: ", str(time_exposure), " seconds")
+time_exposure_ms = st.number_input(
+"Please enter the exposure time of the Cubesat's Detector in milliseconds",
+value=100, placeholder="Type a number...") 
+st.write("Entered cubesat exposure time: ", str(time_exposure_ms), " milliseconds")
 #now convert to kilograms, meters, and seconds SI.
 cubesat_aperture, a_surface = cubesat_aperture_cm * 10**-2, a_surface_km * 10**3
-
+time_exposure = time_exposure_ms * 10**-3
 def import_dict_json(filename):
     with open(filename, 'r') as f:
         return json.load(f)
@@ -209,7 +209,7 @@ flow_vars_dict[g]["Symbol"] = sympy.symbols("g")
 flow_vars_dict[f] = {"Definition": f_dev, "Value": f_val}
 flow_vars_dict[f]["Symbol"] = sympy.symbols("f")
 
-Q = sympy.symbols("Q")
+Q = sympy.symbols("Q_\\text{min}")
 q_detect = 2 #dimensionless
 Q_expr = U * W * massCH4 * q_detect * pressure * f / (
 (sympy.sqrt(t*n_dot)) * massAir * g)
