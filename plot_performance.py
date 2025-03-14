@@ -12,20 +12,20 @@ st.subheader(
 "To tell you the cost and performance of your system please type and adjust the following information: ")
 satellite_number = st.number_input("Please type the number of satellites here ", 
                 value=1, placeholder="Type a number...", step=1, min_value=1)
-st.write("typeed Number of satellites: ", str(satellite_number))
+st.write("Entered Number of satellites: ", str(satellite_number))
 a_surface_km = st.number_input(
 "Please type the altitude of the Cubesat Orbit in kilometers",
 value=450, placeholder="Type a number...", step=25) 
-st.write("typeed cubesat orbit altitude: ", str(a_surface_km), " km")
+st.write("Entered cubesat orbit altitude: ", str(a_surface_km), " km")
 cubesat_aperture_cm = st.number_input(
 "Please type the aperture of the primary optic of the cubesat in cm",
 value=15, placeholder="Type a number...", step=1, min_value=5)
 cubesat_aperture_m = cubesat_aperture_cm * 10**-2 
-st.write("typeed cubesat aperture: ", str(cubesat_aperture_cm), " cm")
+st.write("Entered cubesat aperture: ", str(cubesat_aperture_cm), " cm")
 time_exposure_ms = st.number_input(
 "Please type the exposure time of the Cubesat's Detector in milliseconds",
 value=10, placeholder="Type a number...") 
-st.write("typeed cubesat exposure time: ", str(time_exposure_ms), " milliseconds")
+st.write("Entered cubesat exposure time: ", str(time_exposure_ms), " milliseconds")
 #now convert to kilograms, meters, and seconds SI.
 cubesat_aperture, a_surface = cubesat_aperture_cm * 10**-2, a_surface_km * 10**3
 time_exposure = time_exposure_ms * 10**-3
@@ -87,11 +87,11 @@ st.write("The side length of the pixel in the direction perpendicular to the orb
     side_length_pixel_perp_to_orbit_dir)) + " meters.")
 st.write("The side length of the pixel in the direction parallel to the orbit direction is " + str(np.round(
     distance_swept_on_Earth, 1)) + " meters.")
-st.latex("\\large \\text{The resulting pixel size is: } \\textbf{"+ str(np.round(side_length_pixel_perp_to_orbit_dir))
- + " meters by " + str(np.round(distance_swept_on_Earth, 1)) + " meters.}")
+st.write("The resulting pixel size is:  $\\textbf{"+ str(np.round(side_length_pixel_perp_to_orbit_dir))
+ + " meters by " + str(np.round(distance_swept_on_Earth, 1)) + " meters.}$")
 def get_vars(expression):
     return [x for x in expression.free_symbols]
-if st.button("Show our work for the spatial resolution (pixel size)?"):
+if st.button("Show our work for the spatial resolution? (pixel size)"):
     vars = get_vars(resolved_distance)
     vars.append(resolved_distance)
     st.write("$$\\Large " + sympy.latex(vars_dict[resolved_distance]["Symbol"])
@@ -167,13 +167,14 @@ avg_wind_speed_meters_per_second = 3.5
 avg_wind_speed_meters_per_hour = avg_wind_speed_meters_per_second * 3600 #meters per hour
 min_flow_rate = calc_min_leak_kg_per_hour(SNR, side_length_pixel_perp_to_orbit_dir, 
     avg_wind_speed_meters_per_hour)
-
-st.write("Using a polar orbit with a period of 90 minutes, a chosen site on Earth can be visited"
-      +   " every " + str(np.round(43200 / (3600 * satellite_number), 2)) + " hours.")
+#st.write("The resulting pixel size is:  $\\textbf{"+ str(np.round(side_length_pixel_perp_to_orbit_dir)))
+st.write("Using a polar orbit with a period of 90 minutes and the entered number of satellites, "+
+" $ \\textbf{we can observe a chosen site on Earth every " 
++ str(np.round(43200 / (3600 * satellite_number), 2)) + " hours. }$")
 
 st.write("Since the Signal-to-Noise Ratio (SNR) is " + str(np.round(SNR, 2)) + 
-", the smallest methane leak we can detect has a flow rate of " + 
-str(np.round(min_flow_rate, 2)) + " kg/hour.")
+", $\\textbf{the smallest methane leak we can detect has a flow rate of " + 
+str(np.round(min_flow_rate, 2)) + " kg/hour.}$")
 #Fixed W! Consider that we have to consider a specific instant, not the whole exposure!   
 #return [side_length_pixel_perp_to_orbit_dir, distance_swept_on_Earth, 
 #    calc_min_leak_kg_per_hour(SNR, side_length_pixel_perp_to_orbit_dir, 
@@ -253,4 +254,5 @@ if st.button("Show work for the threshold flow rate?"):
                  " and has a value of $", val_str, "$")
             val_str = str(flow_vars_dict[x]["Value"])
 
-st.write("Which would cost " + str(604 * satellite_number) + "k USD.")
+st.write("Each satellite has a total direct annualized cost of 604k USD, so the total direct cost of your system" +
+" is $\\textbf{only "+ str(604 * satellite_number) + "k USD per year. Far less than anyone else for the same performance!}$")
