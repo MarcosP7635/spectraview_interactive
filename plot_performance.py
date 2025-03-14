@@ -8,13 +8,21 @@ import json
 
 st.title(
 "Interactive Web Application to Plot the Peformance of Drones and Cubesats Using AWG Photonic Chips")
-satellite_number = st.number_input("Please enter the number of satellites", 
+cost_annualized_direct = 1000*st.number_input("Please enter the annual budget in thousands of dollars (USD)", 
+    value=604, placeholder="Type a number...", step=604, min_value=604)
+st.write("Entered annual budget: " + str(int(np.floor(cost_annualized_direct/1000))) + "k USD")
+satellites_available = int(np.floor(cost_annualized_direct / 604000))
+st.write("This budget allows for " + str(satellites_available) + 
+         " satellites, which with a polar orbit allows for a chosen site to "
+         + "be viewed every " +  str(12 / satellites_available) + " hours.")
+satellite_number = st.number_input("Alternatively, you can enter the number of satellites here ", 
                 value=1, placeholder="Type a number...", step=1, min_value=1)
-st.write("Using a polar orbit with a period of 90 minutes, any site on Earth can be visited"
-      +   " every " + str(43200 / (3600 * satellite_number)) + " hours.")
+st.write("Which would cost " + str(604 * satellite_number) + "k USD.")
+st.write("Using a polar orbit with a period of 90 minutes, a chosen site on Earth can be visited"
+      +   " every " + str(np.round(43200 / (3600 * satellite_number), 2)) + " hours.")
 a_surface_km = st.number_input(
 "Please enter the altitude of the Cubesat Orbit in kilometers",
-value=500.0, placeholder="Type a number...", step=25.0) 
+value=500, placeholder="Type a number...", step=25) 
 st.write("Entered cubesat orbit altitude: ", str(a_surface_km), " km")
 cubesat_aperture_cm = st.number_input(
 "Please enter the aperture of the primary optic of the cubesat in cm",
