@@ -8,31 +8,24 @@ import json
 
 st.title(
 "Interactive Web Application to Plot the Peformance of Drones and Cubesats Using AWG Photonic Chips")
-cost_annualized_direct = 1000*st.number_input("Please enter the annual budget in thousands of dollars (USD)", 
-    value=604, placeholder="Type a number...", step=604, min_value=604)
-st.write("Entered annual budget: " + str(int(np.floor(cost_annualized_direct/1000))) + "k USD")
-satellites_available = int(np.floor(cost_annualized_direct / 604000))
-st.write("This budget allows for " + str(satellites_available) + 
-         " satellites, which with a polar orbit allows for a chosen site to "
-         + "be viewed every " +  str(12 / satellites_available) + " hours.")
-satellite_number = st.number_input("Alternatively, you can enter the number of satellites here ", 
+st.subheader(
+"To tell you the cost and performance of your system please type and adjust the following information: ")
+satellite_number = st.number_input("Please type the number of satellites here ", 
                 value=1, placeholder="Type a number...", step=1, min_value=1)
-st.write("Which would cost " + str(604 * satellite_number) + "k USD.")
-st.write("Using a polar orbit with a period of 90 minutes, a chosen site on Earth can be visited"
-      +   " every " + str(np.round(43200 / (3600 * satellite_number), 2)) + " hours.")
+st.write("typeed Number of satellites: ", str(satellite_number))
 a_surface_km = st.number_input(
-"Please enter the altitude of the Cubesat Orbit in kilometers",
-value=500, placeholder="Type a number...", step=25) 
-st.write("Entered cubesat orbit altitude: ", str(a_surface_km), " km")
+"Please type the altitude of the Cubesat Orbit in kilometers",
+value=450, placeholder="Type a number...", step=25) 
+st.write("typeed cubesat orbit altitude: ", str(a_surface_km), " km")
 cubesat_aperture_cm = st.number_input(
-"Please enter the aperture of the primary optic of the cubesat in cm",
-value=5.0, placeholder="Type a number...", step=1.0)
+"Please type the aperture of the primary optic of the cubesat in cm",
+value=15, placeholder="Type a number...", step=1, min_value=5)
 cubesat_aperture_m = cubesat_aperture_cm * 10**-2 
-st.write("Entered cubesat aperture: ", str(cubesat_aperture_cm), " cm")
+st.write("typeed cubesat aperture: ", str(cubesat_aperture_cm), " cm")
 time_exposure_ms = st.number_input(
-"Please enter the exposure time of the Cubesat's Detector in milliseconds",
-value=100, placeholder="Type a number...") 
-st.write("Entered cubesat exposure time: ", str(time_exposure_ms), " milliseconds")
+"Please type the exposure time of the Cubesat's Detector in milliseconds",
+value=10, placeholder="Type a number...") 
+st.write("typeed cubesat exposure time: ", str(time_exposure_ms), " milliseconds")
 #now convert to kilograms, meters, and seconds SI.
 cubesat_aperture, a_surface = cubesat_aperture_cm * 10**-2, a_surface_km * 10**3
 time_exposure = time_exposure_ms * 10**-3
@@ -55,7 +48,7 @@ scale_factors.sort()
     
 D, lam, r = sympy.symbols("D"), sympy.symbols("lambda"), sympy.symbols("r")
 lam_symbol, lam_val = sympy.symbols("lambda"), 1.662 * 10**-6
-lam_def = "the center wavelength, in meters, of the AWG photonic chip"
+lam_def = "the central wavelength, in meters, of the spectrograph"
 D_symbol, D_val = sympy.symbols("D"), cubesat_aperture_m
 D_def = "the diameter of the telescope's primary optic in meters"
 r_symbol, r_val = sympy.symbols("r"), a_surface
@@ -72,33 +65,33 @@ resolved_distance_val = np.float64(resolved_distance.subs([(x, vars_dict[x]["Val
 resolved_distance_symbol = sympy.symbols("L")
 vars_dict[resolved_distance] = {"Value": resolved_distance_val, 
                                 "Symbol": resolved_distance_symbol,
-"Definition": ("the angular resolution in radians of the telescope on the cubesat perpendicular to the " +
-    " motion of the cubesat")}
+"Definition": ("the spatial resolution in meters of the telescope on the cubesat perpendicular to the " +
+    " velocity of the cubesat")}
 #print the result
 radians_viewed = float(resolved_distance_val) / a_surface
 fov_radius_meters = resolved_distance_val / 2
 M = 5.9721679 * 10**24 #kg
 G = 6.6743 * 10**-11 #m^3 kg^-1 s^-2
 R_earth = 6378100 #m
-a_center_earth = a_surface + R_earth
-P = np.sqrt(4 * np.pi**2 * a_center_earth**3 / (G*M))
-v = np.sqrt(G*M/a_center_earth) #meters per second
+a_ctype_earth = a_surface + R_earth
+P = np.sqrt(4 * np.pi**2 * a_ctype_earth**3 / (G*M))
+v = np.sqrt(G*M/a_ctype_earth) #meters per second
 orbit_fraction = time_exposure / P #meters
 distance_swept_on_Earth = orbit_fraction * R_earth * 2 * np.pi
 solid_angle_viewed = radians_viewed**2 #steradians
 area = ((cubesat_aperture/2)**2) * np.pi #square meters
 solid_angle_of_telescope_viewed_by_Earth = np.pi * (cubesat_aperture/2)**2 / (a_surface**2) #steradians
 side_length_pixel_perp_to_orbit_dir = np.float64(resolved_distance_val)
+st.subheader("Quick facts about your system:")
 st.write("The side length of the pixel in the direction perpendicular to the orbit direction is " + str(np.round(
     side_length_pixel_perp_to_orbit_dir)) + " meters.")
 st.write("The side length of the pixel in the direction parallel to the orbit direction is " + str(np.round(
     distance_swept_on_Earth, 1)) + " meters.")
-st.write("So the pixel size is " + str(np.round(
-    side_length_pixel_perp_to_orbit_dir)) + " meters by " +
-    str(np.round(distance_swept_on_Earth, 1)) + " meters.")
+st.latex("\\large \\text{The resulting pixel size is: } \\textbf{"+ str(np.round(side_length_pixel_perp_to_orbit_dir))
+ + " meters by " + str(np.round(distance_swept_on_Earth, 1)) + " meters.}")
 def get_vars(expression):
     return [x for x in expression.free_symbols]
-if st.button("Show work?"):
+if st.button("Show our work for the spatial resolution (pixel size)?"):
     vars = get_vars(resolved_distance)
     vars.append(resolved_distance)
     st.write("$$\\Large " + sympy.latex(vars_dict[resolved_distance]["Symbol"])
@@ -156,7 +149,7 @@ def calc_min_leak_kg_per_hour(SNR, distance, wind_speed):
     #Which agrees with Equation 14 from Jacobs et al. 2016.  https://doi.org/10.5194/acp-16-14371-2016
     #They further multiply some dimensionless $q$ where "q takes on values of 2 for detection and 5 for 
     # quantification."
-    #Please enter values in units of kg, hour, m, and m/hour
+    #Please type values in units of kg, hour, m, and m/hour
     #Sigma is the uncertainty or 1/SNR
     #return excess_methane * 0.7 * 0.016 * 3600 / (distance / wind_speed)
     background_methane_fraction = 1921.72 * (10**-9) #moles of methane per mole of dry air
@@ -174,6 +167,10 @@ avg_wind_speed_meters_per_second = 3.5
 avg_wind_speed_meters_per_hour = avg_wind_speed_meters_per_second * 3600 #meters per hour
 min_flow_rate = calc_min_leak_kg_per_hour(SNR, side_length_pixel_perp_to_orbit_dir, 
     avg_wind_speed_meters_per_hour)
+
+st.write("Using a polar orbit with a period of 90 minutes, a chosen site on Earth can be visited"
+      +   " every " + str(np.round(43200 / (3600 * satellite_number), 2)) + " hours.")
+
 st.write("Since the Signal-to-Noise Ratio (SNR) is " + str(np.round(SNR, 2)) + 
 ", the smallest methane leak we can detect has a flow rate of " + 
 str(np.round(min_flow_rate, 2)) + " kg/hour.")
@@ -187,7 +184,7 @@ W, U, sigma = sympy.symbols("W"), sympy.symbols("U"), sympy.sqrt(t*n_dot)
 t_symbol, t_val = sympy.symbols("t"), time_exposure
 t_def = "the exposure time of the detector in seconds"
 n_dot_symbol, n_dot_val = sympy.symbols("(dn/dt)"), np.float64(np.sum(counts_per_second_arrs_dict[scale_factors[0]]))
-n_dot_def = "the average number of photons per second incident on the detector summed over every spectral channel"
+n_dot_def = "the average number of photons per second incident on the detector summed over every spectral channel from the spectrograph"
 W_symbol, W_val = sympy.symbols("D"), side_length_pixel_perp_to_orbit_dir
 W_def = "the width of the instantaneous field of view seen by the satellite in meters "
 U_symbol, U_val = sympy.symbols("lambda"), avg_wind_speed_meters_per_hour
@@ -251,8 +248,9 @@ if st.button("Show work for the threshold flow rate?"):
                  " and has a value of $", str(np.round(floats,4)), "\\times 10^{", 
                  str(int(oom)), "}$")
         else:
-            val_str = str(np.round(flow_vars_dict[x]["Value"],2))
+            val_str = str(np.round(flow_vars_dict[x]["Value"],3))
             st.write("$ "+ sympy.latex(x), "$ is ", flow_vars_dict[x]["Definition"], 
                  " and has a value of $", val_str, "$")
             val_str = str(flow_vars_dict[x]["Value"])
 
+st.write("Which would cost " + str(604 * satellite_number) + "k USD.")
